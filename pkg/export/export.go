@@ -128,6 +128,7 @@ func (e *Export) done() {
 }
 
 func (e *Export) Export(ctx context.Context) error {
+	defer e.done()
 	if err := e.node.Shutdown(ctx); err != nil {
 		return err
 	}
@@ -144,8 +145,6 @@ func (e *Export) Export(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	defer e.done()
 
 	var last bool
 	for b := range stream {
