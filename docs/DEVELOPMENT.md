@@ -10,7 +10,7 @@ running on k8s somewhere, but is not covered here.
 
 [Deploy MinIO on Docker Compose](https://docs.min.io/docs/deploy-minio-on-docker-compose.html)
 
-This document is not step by step instruction, but provides the large parts. At the end you will have:
+This document is not step by step instructions, but provides the large parts. At the end you will have:
 
 - kind k8s local cluster
 - minio bucket
@@ -44,14 +44,14 @@ usage as required to setup the development environment.
 
 Install the minio plugin:
 
-```
+```shell
 kubectl krew update
 kubectl krew install minio
 ```
 
 Add required helm chart repositories:
 
-```
+```shell
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo add filecoin https://filecoin-project.github.io/helm-charts
 helm repo update
@@ -63,8 +63,8 @@ helm repo update
 
 Create a cluster with three worker nodes.
 
-```
-$ cat > cluster.yaml <<EOF
+```yaml
+# cluster.yaml
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
@@ -74,8 +74,8 @@ nodes:
 - role: worker
 EOF
 ```
-```
-$ kind create cluster --config cluster.yaml
+```shell
+kind create cluster --config cluster.yaml
 ```
 
 #### Moving Container Images
@@ -84,8 +84,8 @@ $ kind create cluster --config cluster.yaml
 
 When building the docker container, you will need to move it into the cluster. Kind provides an easy way to do this.
 
-```
-$ kind load docker-image filsnap:latest
+```shell
+kind load docker-image filsnap:latest
 ```
 
 ### Install Monitoring Stack
@@ -98,8 +98,8 @@ $ kind load docker-image filsnap:latest
 Install the prometheus monitoring stack with grafana enabled and persistence storage. This configuration enables cluster
 wide monitoring with no selectors, and persistence of data.
 
-```
-$ cat > values-prom-stack.yaml <<EOF
+```yaml
+# values-prom-stack.yaml
 prometheus:
   prometheusSpec:
     ruleSelector: {}
@@ -128,7 +128,7 @@ grafana:
     size: 10Gi
 EOF
 ```
-```
+```shell
 helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring --values values-prom-stack.yaml
 ```
 
@@ -136,17 +136,17 @@ helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring
 
 [More Information: Operator](https://github.com/minio/operator)
 
-```
-$ kubectl minio init
+```shell
+kubectl minio init
 ```
 
 #### Creating a Tenant
 
 [More Information: Tenant](https://docs.min.io/minio/k8s/tenant-management/deploy-minio-tenant.html)
 
-```
-$ kubectl create namespace minio
-$ kubectl minio proxy -n minio-operator
+```shell
+kubectl create namespace minio
+kubectl minio proxy -n minio-operator
 ```
 
 Follow the instruction provided by `minio proxy` and login to the operator console then click the `New Tenant`.
@@ -171,8 +171,8 @@ Copy down the Console Credentials, you will also use these for api access to the
 
 #### Accessining MinIO Console & Creating Bucket
 
-```
-$ kubectl port-forward service/minio-console 9090:9090 -n minio
+```shell
+kubectl port-forward service/minio-console 9090:9090 -n minio
 ```
 
 Open the console http://localhost:9090 and login using the Console Credentials.
@@ -183,8 +183,8 @@ Create a bucket called `filsnap` with all options disabled.
 
 Create a namespace for the lotus daemons
 
-```
-$ kubectl create namespace ntwk-butterflynet-filsnap
+```shell
+kubectl create namespace ntwk-butterflynet-filsnap
 ```
 
 Note: This is the same namespace you will develop in, not technically required, but it's easier
@@ -194,34 +194,34 @@ is required, otherwise all operations are `read-only` and wouldn't require a tok
 
 #### Creating a shared jwt token
 
-```
-$ mkdir /tmp/secrets
-$ lotus-shed jwt new node
-$ lotus-shed base16 -decode < jwt-node.jwts > /tmp/secrets/auth-jwt-private
-$ cp jwt-node.token /tmp/secrets/jwt-all-privs-token
+```shell
+mkdir /tmp/secrets
+lotus-shed jwt new node
+lotus-shed base16 -decode < jwt-node.jwts > /tmp/secrets/auth-jwt-private
+cp jwt-node.token /tmp/secrets/jwt-all-privs-token
 
-$ lotus-shed jwt token --read         --output /tmp/secrets/jwt-ro-privs-token  jwt-node.jwts
-$ lotus-shed jwt token --read --write --output /tmp/secrets/jwt-rw-privs-token  jwt-node.jwts
-$ lotus-shed jwt token --sign         --output /tmp/secrets/jwt-so-privs-token  jwt-node.jwts
+lotus-shed jwt token --read         --output /tmp/secrets/jwt-ro-privs-token  jwt-node.jwts
+lotus-shed jwt token --read --write --output /tmp/secrets/jwt-rw-privs-token  jwt-node.jwts
+lotus-shed jwt token --sign         --output /tmp/secrets/jwt-so-privs-token  jwt-node.jwts
 
-$ kubectl create secret generic lotus-jwt                           \
-  --from-file=auth-jwt-private=/tmp/secrets/auth-jwt-private        \
-  --from-file=jwt-all-privs-token=/tmp/secrets/jwt-all-privs-token  \
-  --from-file=jwt-ro-privs-token=/tmp/secrets/jwt-ro-privs-token    \
-  --from-file=jwt-rw-privs-token=/tmp/secrets/jwt-rw-privs-token    \
-  --from-file=jwt-so-privs-token=/tmp/secrets/jwt-so-privs-token    \
-  --output=name --namespace ntwk-butterflynet-filsnap
+kubectl create secret generic lotus-jwt                           \
+--from-file=auth-jwt-private=/tmp/secrets/auth-jwt-private        \
+--from-file=jwt-all-privs-token=/tmp/secrets/jwt-all-privs-token  \
+--from-file=jwt-ro-privs-token=/tmp/secrets/jwt-ro-privs-token    \
+--from-file=jwt-rw-privs-token=/tmp/secrets/jwt-rw-privs-token    \
+--from-file=jwt-so-privs-token=/tmp/secrets/jwt-so-privs-token    \
+--output=name --namespace ntwk-butterflynet-filsnap
 
-$ rm -rf /tmp/secrets
-$ rm jwt-node.jwts jwt-node.token
+rm -rf /tmp/secrets
+rm jwt-node.jwts jwt-node.token
 ```
 
 #### Install Butterfly Lotus Daemons
 
 [Docker Images](https://hub.docker.com/r/travisperson/lotus/tags?page=1&name=butterfly)
 
-```
-$ cat values-lotus.yaml <<EOF
+```yaml
+# values-lotus.yaml
 image:
   tag: butterflynet-<version>
 
@@ -260,7 +260,7 @@ persistence:
     size: "1Gi"
 EOF
 ```
-```
+```shell
 helm install lotus-a filecoin/lotus-fullnode --values values-lotus.yaml --namespace ntwk-butterflynet-filsnap
 helm install lotus-b filecoin/lotus-fullnode --values values-lotus.yaml --namespace ntwk-butterflynet-filsnap
 helm install lotus-c filecoin/lotus-fullnode --values values-lotus.yaml --namespace ntwk-butterflynet-filsnap
