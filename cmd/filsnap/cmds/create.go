@@ -2,9 +2,11 @@ package cmds
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"syscall"
 	"time"
 
 	"github.com/filecoin-project/go-state-types/abi"
@@ -153,12 +155,21 @@ var cmdCreate = &cli.Command{
 		for _, addr := range addrs {
 			node, closer, err := CreateLotusClient(ctx, addr)
 			if err != nil {
+				if errors.Is(err, syscall.ECONNREFUSED) {
+					logger.Warnw("failed to dial node", "err", err)
+					continue
+				}
+
 				return err
 			}
 
 			defer closer()
 
 			nodes = append(nodes, node)
+		}
+
+		if len(nodes) == 0 {
+			return xerrors.Errorf("no nodes")
 		}
 
 		cm := consensus.NewConsensusManager(nodes)
