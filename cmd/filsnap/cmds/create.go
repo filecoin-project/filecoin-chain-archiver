@@ -125,8 +125,8 @@ var cmdCreate = &cli.Command{
 		ctx := context.Background()
 
 		flagBucketEndpoint := cctx.String("bucket-endpoint")
-		flagBucketAccessKey := cctx.String("bucket-access-key")
-		flagBucketSecretKey := cctx.String("bucket-secret-key")
+		flagBucketAccessKey := cctx.String("access-key")
+		flagBucketSecretKey := cctx.String("secret-key")
 		flagBucket := cctx.String("bucket")
 		flagDiscard := cctx.Bool("discard")
 		flagProgressUpdate := cctx.Duration("progress-update")
