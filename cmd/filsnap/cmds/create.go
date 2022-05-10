@@ -2,10 +2,12 @@ package cmds
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"syscall"
 	"time"
 
@@ -241,6 +243,9 @@ var cmdCreate = &cli.Command{
 		}
 
 		r, w := io.Pipe()
+		h := sha256.New()
+
+		tr := io.TeeReader(r, h)
 
 		e := export.NewExport(node, tsk, abi.ChainEpoch(flagStaterootCount), true, w)
 		errCh := make(chan error)
@@ -298,7 +303,7 @@ var cmdCreate = &cli.Command{
 				Secure: false,
 			})
 
-			info, err := minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%d.car", height), r, -1, minio.PutObjectOptions{})
+			info, err := minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%d.car", height), tr, -1, minio.PutObjectOptions{})
 			if err != nil {
 				return err
 			}
@@ -313,13 +318,18 @@ var cmdCreate = &cli.Command{
 				"expiration", info.Expiration,
 				"expiration_rule_id", info.ExpirationRuleID,
 			)
+
+			info, err = minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s.sha256sum", info.Key), strings.NewReader(fmt.Sprintf("%x", h.Sum(nil))), -1, minio.PutObjectOptions{})
+			if err != nil {
+				logger.Errorw("failed to write sha256sum", "object", info.Key, "err", err)
+			}
 		}
 
 		if err := <-errCh; err != nil {
 			return err
 		}
 
-		logger.Infow("finished")
+		logger.Infow("finished", "digiest", fmt.Sprintf("%x", h.Sum(nil)))
 
 		return nil
 	},
