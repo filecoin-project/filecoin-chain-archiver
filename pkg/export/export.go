@@ -2,6 +2,7 @@ package export
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -47,6 +48,8 @@ func GetNextSnapshotHeight(current, interval, confidence abi.ChainEpoch, after b
 func waitAPIDown(ctx context.Context, node api.FullNode) error {
 	ctx, cancel := context.WithTimeout(ctx, 300*time.Second)
 	defer cancel()
+
+	logger.Infow("waiting for node to go offline")
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -66,6 +69,8 @@ func waitAPIDown(ctx context.Context, node api.FullNode) error {
 func waitAPI(ctx context.Context, node api.FullNode) error {
 	ctx, cancel := context.WithTimeout(ctx, 300*time.Second)
 	defer cancel()
+
+	logger.Infow("waiting for node to come online")
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -134,13 +139,14 @@ func (e *Export) Export(ctx context.Context) error {
 	}
 
 	if err := waitAPIDown(ctx, e.node); err != nil {
-		return err
+		return fmt.Errorf("node failed to go offline: %w", err)
 	}
 
 	if err := waitAPI(ctx, e.node); err != nil {
-		return err
+		return fmt.Errorf("node failed to come back online: %w", err)
 	}
 
+	logger.Infow("starting export")
 	stream, err := e.node.ChainExport(ctx, e.nroots, e.oldmsgskip, e.tsk)
 	if err != nil {
 		return err

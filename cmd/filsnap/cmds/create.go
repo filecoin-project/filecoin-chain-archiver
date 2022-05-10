@@ -243,11 +243,9 @@ var cmdCreate = &cli.Command{
 		r, w := io.Pipe()
 
 		e := export.NewExport(node, tsk, abi.ChainEpoch(flagStaterootCount), true, w)
-
+		errCh := make(chan error)
 		go func() {
-			if err := e.Export(ctx); err != nil {
-				logger.Errorw("error", "err", err)
-			}
+			errCh <- e.Export(ctx)
 		}()
 
 		go func() {
@@ -277,6 +275,10 @@ var cmdCreate = &cli.Command{
 				select {
 				case <-time.After(flagProgressUpdate):
 					size, done := e.Progress()
+					if size == 0 {
+						continue
+					}
+
 					if done {
 						return
 					}
@@ -311,6 +313,10 @@ var cmdCreate = &cli.Command{
 				"expiration", info.Expiration,
 				"expiration_rule_id", info.ExpirationRuleID,
 			)
+		}
+
+		if err := <-errCh; err != nil {
+			return err
 		}
 
 		logger.Infow("finished")
