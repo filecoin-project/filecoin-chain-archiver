@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/filecoin-project/lotus/cli/util"
-	"github.com/travisperson/filsnap/pkg/nodelocker"
-	"github.com/travisperson/filsnap/pkg/nodelocker/api/apiclient"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker/api/apiclient"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyz"

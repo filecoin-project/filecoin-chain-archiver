@@ -24,9 +24,9 @@ http://minio.minio.svc.cluster.local
 
 Lotus API Multiaddrs
 ```
-/dns/lotus-a-lotus-daemon.ntwk-butterflynet-filsnap.svc.cluster.local/tcp/1234
-/dns/lotus-b-lotus-daemon.ntwk-butterflynet-filsnap.svc.cluster.local/tcp/1234
-/dns/lotus-c-lotus-daemon.ntwk-butterflynet-filsnap.svc.cluster.local/tcp/1234
+/dns/lotus-a-lotus-daemon.ntwk-butterflynet-filecoin-chain-archiver.svc.cluster.local/tcp/1234
+/dns/lotus-b-lotus-daemon.ntwk-butterflynet-filecoin-chain-archiver.svc.cluster.local/tcp/1234
+/dns/lotus-c-lotus-daemon.ntwk-butterflynet-filecoin-chain-archiver.svc.cluster.local/tcp/1234
 ```
 
 ## Requirements
@@ -85,7 +85,7 @@ kind create cluster --config cluster.yaml
 When building the docker container, you will need to move it into the cluster. Kind provides an easy way to do this.
 
 ```shell
-kind load docker-image filsnap:latest
+kind load docker-image filecoin-chain-archiver:latest
 ```
 
 ### Install Monitoring Stack
@@ -177,14 +177,14 @@ kubectl port-forward service/minio-console 9090:9090 -n minio
 
 Open the console http://localhost:9090 and login using the Console Credentials.
 
-Create a bucket called `filsnap` with all options disabled.
+Create a bucket called `filecoin-chain-archiver` with all options disabled.
 
 ### Creating Lotus Nodes
 
 Create a namespace for the lotus daemons
 
 ```shell
-kubectl create namespace ntwk-butterflynet-filsnap
+kubectl create namespace ntwk-butterflynet-filecoin-chain-archiver
 ```
 
 Note: This is the same namespace you will develop in, not technically required, but it's easier
@@ -210,7 +210,7 @@ kubectl create secret generic lotus-jwt                           \
 --from-file=jwt-ro-privs-token=/tmp/secrets/jwt-ro-privs-token    \
 --from-file=jwt-rw-privs-token=/tmp/secrets/jwt-rw-privs-token    \
 --from-file=jwt-so-privs-token=/tmp/secrets/jwt-so-privs-token    \
---output=name --namespace ntwk-butterflynet-filsnap
+--output=name --namespace ntwk-butterflynet-filecoin-chain-archiver
 
 rm -rf /tmp/secrets
 rm jwt-node.jwts jwt-node.token
@@ -261,7 +261,7 @@ persistence:
 EOF
 ```
 ```shell
-helm install lotus-a filecoin/lotus-fullnode --values values-lotus.yaml --namespace ntwk-butterflynet-filsnap
-helm install lotus-b filecoin/lotus-fullnode --values values-lotus.yaml --namespace ntwk-butterflynet-filsnap
-helm install lotus-c filecoin/lotus-fullnode --values values-lotus.yaml --namespace ntwk-butterflynet-filsnap
+helm install lotus-a filecoin/lotus-fullnode --values values-lotus.yaml --namespace ntwk-butterflynet-filecoin-chain-archiver
+helm install lotus-b filecoin/lotus-fullnode --values values-lotus.yaml --namespace ntwk-butterflynet-filecoin-chain-archiver
+helm install lotus-c filecoin/lotus-fullnode --values values-lotus.yaml --namespace ntwk-butterflynet-filecoin-chain-archiver
 ```

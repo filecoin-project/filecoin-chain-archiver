@@ -4,7 +4,7 @@ unexport GOFLAGS
 
 GOCC?=go
 
-ldflags=-X=github.com/filecoin-project/filecoin-snapshot-mvp/build.CurrentCommit=+git.$(subst -,.,$(shell git describe --always --match=NeVeRmAtCh --dirty 2>/dev/null || git rev-parse --short HEAD 2>/dev/null))
+ldflags=-X=github.com/filecoin-project/filecoin-chain-archiver/build.CurrentCommit=+git.$(subst -,.,$(shell git describe --always --match=NeVeRmAtCh --dirty 2>/dev/null || git rev-parse --short HEAD 2>/dev/null))
 
 ifneq ($(strip $(LDFLAGS)),)
 	ldflags+=-extldflags=$(LDFLAGS)
@@ -14,14 +14,14 @@ GOFLAGS+=-ldflags="$(ldflags)"
 
 BINS:=
 
-all: filsnap
+all: filecoin-chain-archiver
 .PHONY: all
 
 clean:
 	rm -rf $(BINS)
 .PHONY: clean
 
-filsnap:
-	$(GOCC) build $(GOFLAGS) -o filsnap ./cmd/filsnap/
-.PHONY: filsnap
-BINS+=filsnap
+filecoin-chain-archiver:
+	$(GOCC) build $(GOFLAGS) -o filecoin-chain-archiver ./cmd/filecoin-chain-archiver/
+.PHONY: filecoin-chain-archiver
+BINS+=filecoin-chain-archiver

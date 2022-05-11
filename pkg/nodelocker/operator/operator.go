@@ -3,14 +3,14 @@ package operator
 import (
 	"context"
 
-	"github.com/travisperson/filsnap/build"
-	"github.com/travisperson/filsnap/pkg/nodelocker"
-	"github.com/travisperson/filsnap/pkg/nodelocker/api"
+	"github.com/filecoin-project/filecoin-chain-archiver/build"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker/api"
 
 	"github.com/ipfs/go-log/v2"
 )
 
-var logger = log.Logger("filsnap/operator/thing")
+var logger = log.Logger("filecoin-chain-archiver/operator/thing")
 
 type OperatorImpl struct {
 	NodeLocker api.NodeLocker

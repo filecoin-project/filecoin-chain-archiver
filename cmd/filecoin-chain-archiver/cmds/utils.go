@@ -11,7 +11,7 @@ import (
 	"github.com/filecoin-project/go-jsonrpc"
 
 	cliutil "github.com/filecoin-project/lotus/cli/util"
-	"github.com/travisperson/filsnap/pkg/config"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/config"
 )
 
 func NodeMultiaddrs(cfg *config.Config) ([]string, error) {

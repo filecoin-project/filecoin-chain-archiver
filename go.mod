@@ -1,4 +1,4 @@
-module github.com/travisperson/filsnap
+module github.com/filecoin-project/filecoin-chain-archiver
 
 go 1.16
 

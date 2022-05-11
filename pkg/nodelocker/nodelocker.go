@@ -9,7 +9,7 @@ import (
 	"github.com/ipfs/go-log/v2"
 )
 
-var logger = log.Logger("filsnap/pkg/nodelocker")
+var logger = log.Logger("filecoin-chain-archiver/pkg/nodelocker")
 
 type NodeLock struct {
 	PeerID  string

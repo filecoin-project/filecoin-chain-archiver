@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 
-	"github.com/travisperson/filsnap/pkg/nodelocker"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker"
 )
 
 // This needs to be lifted to something under pkg/export-service/* so that it can be imported here, but defined closer to the export serice.

@@ -14,12 +14,12 @@ import (
 	"github.com/slok/go-http-metrics/middleware"
 	"github.com/slok/go-http-metrics/middleware/std"
 
-	"github.com/travisperson/filsnap/pkg/nodelocker"
-	"github.com/travisperson/filsnap/pkg/nodelocker/api"
-	"github.com/travisperson/filsnap/pkg/nodelocker/operator"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker/api"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker/operator"
 )
 
-var logger = log.Logger("filsnap/service/nodelocker")
+var logger = log.Logger("filecoin-chain-archiver/service/nodelocker")
 
 type NodeLockerService struct {
 	ctx            context.Context

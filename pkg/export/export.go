@@ -16,7 +16,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-var logger = log.Logger("filsnap/pkg/export")
+var logger = log.Logger("filecoin-chain-archiver/pkg/export")
 
 func GetExpectedHeightAt(gts *types.TipSet, at time.Time, blocktime time.Duration) abi.ChainEpoch {
 	gt := time.Unix(int64(gts.MinTimestamp()), 0)
