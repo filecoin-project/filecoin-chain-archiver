@@ -4,32 +4,32 @@ import (
 	"os"
 	"strings"
 
-	"github.com/travisperson/filsnap/build"
-	"github.com/travisperson/filsnap/cmd/filsnap/cmds"
+	"github.com/filecoin-project/filecoin-chain-archiver/build"
+	"github.com/filecoin-project/filecoin-chain-archiver/cmd/filecoin-chain-archiver/cmds"
 
 	"github.com/ipfs/go-log/v2"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 )
 
-var logger = log.Logger("filsnap")
+var logger = log.Logger("filecoin-chain-archiver")
 
 func main() {
 	app := &cli.App{
-		Name:    "filsnap",
+		Name:    "filecoin-chain-archiver",
 		Usage:   "simple chain export mvp",
 		Version: build.Version(),
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "log-level-named",
 				Usage:   "common delimiated list of named loggers and log levels formatted as name:level",
-				EnvVars: []string{"FILSNAP_LOG_LEVEL_NAMED"},
+				EnvVars: []string{"FCA_LOG_LEVEL_NAMED"},
 				Value:   "",
 			},
 			&cli.StringFlag{
 				Name:    "log-level",
-				Usage:   "set all filsnap loggers to level",
-				EnvVars: []string{"FILSNAP_LOG_LEVEL"},
+				Usage:   "set all filecoin-chain-archiver loggers to level",
+				EnvVars: []string{"FCA_LOG_LEVEL"},
 				Value:   "warn",
 			},
 		},
@@ -48,7 +48,7 @@ func main() {
 
 func setupLogging(cctx *cli.Context) error {
 	ll := cctx.String("log-level")
-	if err := log.SetLogLevelRegex("filsnap/*", ll); err != nil {
+	if err := log.SetLogLevelRegex("filecoin-chain-archiver/*", ll); err != nil {
 		return xerrors.Errorf("set log level: %w", err)
 	}
 

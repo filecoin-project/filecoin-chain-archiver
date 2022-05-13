@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var logger = log.Logger("filsnap/cmds")
+var logger = log.Logger("filecoin-chain-archiver/cmds")
 
 var Commands = []*cli.Command{cmdCreate, cmdDefaultConfig, cmdService}
 

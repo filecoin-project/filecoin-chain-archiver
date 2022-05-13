@@ -13,11 +13,11 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o filsnap ./cmd/filsnap
+RUN go build -o filecoin-chain-archiver ./cmd/filecoin-chain-archiver
 
 FROM debian:buster
 
-COPY --from=builder /build/filsnap /usr/local/bin
+COPY --from=builder /build/filecoin-chain-archiver /usr/local/bin
 
-ENTRYPOINT ["/usr/local/bin/filsnap"]
+ENTRYPOINT ["/usr/local/bin/filecoin-chain-archiver"]
 CMD ["-help"]

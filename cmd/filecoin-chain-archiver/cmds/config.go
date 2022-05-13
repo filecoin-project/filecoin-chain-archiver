@@ -3,7 +3,7 @@ package cmds
 import (
 	"fmt"
 
-	"github.com/travisperson/filsnap/pkg/config"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/config"
 	"github.com/urfave/cli/v2"
 )
 

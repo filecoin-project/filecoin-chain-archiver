@@ -15,10 +15,10 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/travisperson/filsnap/build"
-	"github.com/travisperson/filsnap/pkg/nodelocker/api"
-	"github.com/travisperson/filsnap/pkg/nodelocker/api/apiclient"
-	"github.com/travisperson/filsnap/pkg/nodelocker/service"
+	"github.com/filecoin-project/filecoin-chain-archiver/build"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker/api"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker/api/apiclient"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker/service"
 )
 
 var (
@@ -42,12 +42,12 @@ var cmdService = &cli.Command{
 				&cli.StringFlag{
 					Name:    "operator-api",
 					Usage:   "host and port of operator api",
-					EnvVars: []string{"FILSNAP_NODELOCKER_OPERATOR_API"},
+					EnvVars: []string{"FCA_NODELOCKER_OPERATOR_API"},
 					Value:   "http://localhost:5101",
 				},
 				&cli.StringFlag{
 					Name:    "api-info",
-					EnvVars: []string{"FILSNAP_NODELOCKER_OPERATOR_API_INFO"},
+					EnvVars: []string{"FCA_NODELOCKER_OPERATOR_API_INFO"},
 					Hidden:  true,
 				},
 			},
@@ -213,13 +213,13 @@ var cmdService = &cli.Command{
 				&cli.StringFlag{
 					Name:    "service-listen",
 					Usage:   "host and port to listen on",
-					EnvVars: []string{"FILSNAP_NODELOCKER_SERVICE_LISTEN"},
+					EnvVars: []string{"FCA_NODELOCKER_SERVICE_LISTEN"},
 					Value:   "localhost:5100",
 				},
 				&cli.StringFlag{
 					Name:    "operator-listen",
 					Usage:   "host and port to listen on",
-					EnvVars: []string{"FILSNAP_NODELOCKER_OPERATOR_LISTEN"},
+					EnvVars: []string{"FCA_NODELOCKER_OPERATOR_LISTEN"},
 					Value:   "localhost:5101",
 				},
 			},

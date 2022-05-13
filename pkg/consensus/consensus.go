@@ -11,7 +11,7 @@ import (
 	"github.com/ipfs/go-log/v2"
 )
 
-var logger = log.Logger("filsnap/pkg/consensus")
+var logger = log.Logger("filecoin-chain-archiver/pkg/consensus")
 
 type ConsensusManager struct {
 	nodes []api.FullNode

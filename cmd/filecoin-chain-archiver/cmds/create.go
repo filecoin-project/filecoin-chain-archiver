@@ -14,10 +14,10 @@ import (
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/travisperson/filsnap/pkg/config"
-	"github.com/travisperson/filsnap/pkg/consensus"
-	"github.com/travisperson/filsnap/pkg/export"
-	"github.com/travisperson/filsnap/pkg/nodelocker/client"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/config"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/consensus"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/export"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker/client"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
@@ -52,74 +52,74 @@ var cmdCreate = &cli.Command{
 			Name:    "nodelocker-api",
 			Usage:   "host and port of nodelocker api",
 			Value:   "http://127.0.0.1:5100",
-			EnvVars: []string{"FILSNAP_CREATE_NODELOCKER_API"},
+			EnvVars: []string{"FCA_CREATE_NODELOCKER_API"},
 		},
 		&cli.StringFlag{
 			Name:    "bucket",
 			Usage:   "bucket name for export upload",
-			EnvVars: []string{"FILSNAP_CREATE_BUCKET"},
+			EnvVars: []string{"FCA_CREATE_BUCKET"},
 		},
 		&cli.StringFlag{
 			Name:    "bucket-endpoint",
 			Usage:   "bucket host and port for upload",
-			EnvVars: []string{"FILSNAP_CREATE_BUCKET_ENDPOINT"},
+			EnvVars: []string{"FCA_CREATE_BUCKET_ENDPOINT"},
 		},
 		&cli.StringFlag{
 			Name:    "access-key",
 			Usage:   "access key for upload",
-			EnvVars: []string{"FILSNAP_CREATE_ACCESS_KEY"},
+			EnvVars: []string{"FCA_CREATE_ACCESS_KEY"},
 		},
 		&cli.StringFlag{
 			Name:    "secret-key",
 			Usage:   "secret key for upload",
-			EnvVars: []string{"FILSNAP_CREATE_SECRET_KEY"},
+			EnvVars: []string{"FCA_CREATE_SECRET_KEY"},
 		},
 		&cli.BoolFlag{
 			Name:    "discard",
 			Usage:   "discard output, do not upload",
-			EnvVars: []string{"FILSNAP_CREATE_DISCARD"},
+			EnvVars: []string{"FCA_CREATE_DISCARD"},
 			Value:   false,
 		},
 		&cli.StringFlag{
 			Name:    "config-path",
 			Usage:   "path to configuration file",
-			EnvVars: []string{"FILSNAP_CONFIG_PATH"},
+			EnvVars: []string{"FCA_CONFIG_PATH"},
 			Value:   "./config.toml",
 		},
 		&cli.IntFlag{
 			Name:    "interval",
 			Usage:   "interval used to determine next export height",
-			EnvVars: []string{"FILSNAP_CREATE_INTERVAL"},
+			EnvVars: []string{"FCA_CREATE_INTERVAL"},
 			Value:   120,
 		},
 		&cli.IntFlag{
 			Name:    "confidence",
 			Usage:   "number of tipsets that should exist after the determine export height",
-			EnvVars: []string{"FILSNAP_CREATE_CONFIDENCE"},
+			EnvVars: []string{"FCA_CREATE_CONFIDENCE"},
 			Value:   15,
 		},
 		&cli.IntFlag{
 			Name:    "after",
 			Usage:   "use interval height after this height",
-			EnvVars: []string{"FILSNAP_CREATE_AFTER"},
+			EnvVars: []string{"FCA_CREATE_AFTER"},
 			Value:   0,
 		},
 		&cli.IntFlag{
 			Name:    "height",
 			Usage:   "create a snapshot from the given height",
-			EnvVars: []string{"FILSNAP_CREATE_HEIGHT"},
+			EnvVars: []string{"FCA_CREATE_HEIGHT"},
 			Value:   0,
 		},
 		&cli.IntFlag{
 			Name:    "stateroot-count",
 			Usage:   "number of stateroots to included in snapshot",
-			EnvVars: []string{"FILSNAP_CREATE_STATEROOT_COUNT"},
+			EnvVars: []string{"FCA_CREATE_STATEROOT_COUNT"},
 			Value:   2000,
 		},
 		&cli.DurationFlag{
 			Name:    "progress-update",
 			Usage:   "how frequenty to provide provide update logs",
-			EnvVars: []string{"FILSNAP_CREATE_PROGRESS_UPDATE"},
+			EnvVars: []string{"FCA_CREATE_PROGRESS_UPDATE"},
 			Value:   60 * time.Second,
 		},
 	},

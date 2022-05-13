@@ -1,6 +1,6 @@
-# filsnap
+# Filecoin Chain Archiver
 
-filsnap is a software tool for creating chain exports / snapshots using the lotus filecoin node.
+Filecoin chain archiver is a software tool for creating chain exports / snapshots using the lotus filecoin node.
 
 ## Background
 
@@ -39,11 +39,11 @@ EOF
 ```
 
 ```
-./filsnap nodelocker run
+./filecoin-chain-archiver nodelocker run
 ```
 
 ```
-./filsnap create --height <height> --discard
+./filecoin-chain-archiver create --height <height> --discard
 ```
 
 ## Contributing
@@ -52,4 +52,4 @@ PRs accepted.
 
 ## License
 
-Dual-licensed under [MIT](https://github.com/travisperson/filsnap/blob/master/LICENSE-MIT) + [Apache 2.0](https://github.com/travisperson/filsnap/blob/master/LICENSE-APACHE)
+Dual-licensed under [MIT](https://github.com/filecoin-project/filecoin-chain-archiver/blob/master/LICENSE-MIT) + [Apache 2.0](https://github.com/filecoin-project/filecoin-chain-archiver/blob/master/LICENSE-APACHE)

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/travisperson/filsnap/pkg/nodelocker/api"
+	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker/api"
 )
 
 func NewOperatorClient(ctx context.Context, addr string, requestHeader http.Header) (api.Operator, jsonrpc.ClientCloser, error) {
