@@ -7,17 +7,18 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/filecoin-project/go-state-types/abi"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/filecoin-project/filecoin-chain-archiver/pkg/config"
 	"github.com/filecoin-project/filecoin-chain-archiver/pkg/consensus"
 	"github.com/filecoin-project/filecoin-chain-archiver/pkg/export"
 	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker/client"
+	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
@@ -139,6 +140,11 @@ var cmdCreate = &cli.Command{
 		flagHeight := cctx.Int("height")
 		flagAfter := cctx.Int("after")
 		flagStaterootCount := cctx.Int("stateroot-count")
+
+		u, err := url.Parse(flagBucketEndpoint)
+		if err != nil {
+			return err
+		}
 
 		icfg, err := config.FromFile(flagConfigPath, &config.Config{})
 		if err != nil {
@@ -298,9 +304,20 @@ var cmdCreate = &cli.Command{
 			logger.Infow("discarding output")
 			io.Copy(ioutil.Discard, r)
 		} else {
-			minioClient, err := minio.New(flagBucketEndpoint, &minio.Options{
+			host := u.Host
+			port := u.Port()
+			if port == "" {
+				port = "80"
+				if u.Scheme == "https" {
+					port = "443"
+				}
+			}
+
+			logger.Infow("upload endpoint", "host", host, "port", port, "tls", u.Scheme == "https")
+
+			minioClient, err := minio.New(fmt.Sprintf("%s:%s", host, port), &minio.Options{
 				Creds:  credentials.NewStaticV4(flagBucketAccessKey, flagBucketSecretKey, ""),
-				Secure: false,
+				Secure: u.Scheme == "https",
 			})
 
 			info, err := minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%d.car", height), tr, -1, minio.PutObjectOptions{})
