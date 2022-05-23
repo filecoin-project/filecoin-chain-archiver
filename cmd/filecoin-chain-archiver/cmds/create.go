@@ -50,6 +50,12 @@ var cmdCreate = &cli.Command{
 	`),
 	Flags: []cli.Flag{
 		&cli.StringFlag{
+			Name:    "name-prefix",
+			Usage:   "add a prefix to the snapshot name",
+			Value:   "default/",
+			EnvVars: []string{"FCA_CREATE_NAME_PREFIX"},
+		},
+		&cli.StringFlag{
 			Name:    "nodelocker-api",
 			Usage:   "host and port of nodelocker api",
 			Value:   "http://127.0.0.1:5100",
@@ -130,6 +136,7 @@ var cmdCreate = &cli.Command{
 		flagBucketEndpoint := cctx.String("bucket-endpoint")
 		flagBucketAccessKey := cctx.String("access-key")
 		flagBucketSecretKey := cctx.String("secret-key")
+		flagNamePrefix := cctx.String("name-prefix")
 		flagBucket := cctx.String("bucket")
 		flagDiscard := cctx.Bool("discard")
 		flagProgressUpdate := cctx.Duration("progress-update")
@@ -304,7 +311,7 @@ var cmdCreate = &cli.Command{
 			logger.Infow("discarding output")
 			io.Copy(ioutil.Discard, r)
 		} else {
-			host := u.Host
+			host := u.Hostname()
 			port := u.Port()
 			if port == "" {
 				port = "80"
@@ -320,7 +327,13 @@ var cmdCreate = &cli.Command{
 				Secure: u.Scheme == "https",
 			})
 
-			info, err := minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%d.car", height), tr, -1, minio.PutObjectOptions{})
+			t := export.TimeAtHeight(gtp, height, 30*time.Second)
+
+			name := fmt.Sprintf("%d_%s", height, t.Format("2006_01_02T15_04_05Z"))
+
+			logger.Infow("object", "name", name)
+
+			info, err := minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s%s.car", flagNamePrefix, name), tr, -1, minio.PutObjectOptions{})
 			if err != nil {
 				return err
 			}
@@ -336,7 +349,9 @@ var cmdCreate = &cli.Command{
 				"expiration_rule_id", info.ExpirationRuleID,
 			)
 
-			info, err = minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s.sha256sum", info.Key), strings.NewReader(fmt.Sprintf("%x", h.Sum(nil))), -1, minio.PutObjectOptions{})
+			sha256sum := fmt.Sprintf("%x *%s.car", h.Sum(nil), name)
+
+			info, err = minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s%s.sha256sum", flagNamePrefix, name), strings.NewReader(sha256sum), -1, minio.PutObjectOptions{})
 			if err != nil {
 				logger.Errorw("failed to write sha256sum", "object", info.Key, "err", err)
 			}
