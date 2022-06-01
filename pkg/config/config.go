@@ -10,8 +10,12 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func DefaultConfig() *Config {
-	return &Config{}
+func DefaultIndexServiceConfig() *IndexServiceConfig {
+	return &IndexServiceConfig{}
+}
+
+func DefaultExportWorkerConfig() *ExportWorkerConfig {
+	return &ExportWorkerConfig{}
 }
 
 type URL url.URL
@@ -36,8 +40,19 @@ type Node struct {
 	TokenPath string
 }
 
-type Config struct {
+type ExportWorkerConfig struct {
 	Nodes []Node
+}
+
+type S3ResolverConfig struct {
+	Endpoint      string
+	Bucket        string
+	AccessKeyPath string
+	SecretKeyPath string
+}
+
+type IndexServiceConfig struct {
+	S3Resolver S3ResolverConfig
 }
 
 func FromFile(path string, def interface{}) (interface{}, error) {

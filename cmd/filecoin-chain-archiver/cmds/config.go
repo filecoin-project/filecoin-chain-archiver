@@ -15,7 +15,7 @@ var cmdDefaultConfig = &cli.Command{
 	Action: func(cctx *cli.Context) error {
 		var icfg interface{}
 
-		cfg := config.DefaultConfig()
+		cfg := config.DefaultExportWorkerConfig()
 		cfg.Nodes = append(cfg.Nodes, config.Node{
 			Address:   "/ip4/127.0.0.1/1234",
 			TokenPath: "/path/to/token",
