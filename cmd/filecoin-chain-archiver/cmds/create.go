@@ -333,9 +333,12 @@ var cmdCreate = &cli.Command{
 
 			logger.Infow("object", "name", name)
 
-			info, err := minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s%s.car", flagNamePrefix, name), tr, -1, minio.PutObjectOptions{})
+			info, err := minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s%s.car", flagNamePrefix, name), tr, -1, minio.PutObjectOptions{
+				ContentDisposition: fmt.Sprintf("attachment; filename=\"%s.car\"", name),
+				ContentType:        "application/octet-stream",
+			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to upload", "object", fmt.Sprintf("%s%s.car", flagNamePrefix, name), "err", err)
 			}
 
 			logger.Infow("upload",
@@ -349,12 +352,40 @@ var cmdCreate = &cli.Command{
 				"expiration_rule_id", info.ExpirationRuleID,
 			)
 
-			sha256sum := fmt.Sprintf("%x *%s.car", h.Sum(nil), name)
-
-			info, err = minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s%s.sha256sum", flagNamePrefix, name), strings.NewReader(sha256sum), -1, minio.PutObjectOptions{})
+			latestLocation, err := url.QueryUnescape(info.Location)
 			if err != nil {
-				logger.Errorw("failed to write sha256sum", "object", info.Key, "err", err)
+				logger.Errorw("failed to decode location url", "location", info.Location, "err", err)
+				latestLocation = info.Location
 			}
+
+			sha256sum := fmt.Sprintf("%x *%s.car\n", h.Sum(nil), name)
+
+			info, err = minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s%s.sha256sum", flagNamePrefix, name), strings.NewReader(sha256sum), -1, minio.PutObjectOptions{
+				ContentDisposition: fmt.Sprintf("attachment; filename=\"%s.sha256sum\"", name),
+				ContentType:        "text/plain",
+			})
+			if err != nil {
+				logger.Errorw("failed to write sha256sum", "object", fmt.Sprintf("%s%s.sha256sum", flagNamePrefix, name), "err", err)
+			}
+
+			info, err = minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%slatest", flagNamePrefix), strings.NewReader(latestLocation), -1, minio.PutObjectOptions{
+				WebsiteRedirectLocation: latestLocation,
+				ContentType:             "text/plain",
+			})
+			if err != nil {
+				return fmt.Errorf("failed to write latest", "object", fmt.Sprintf("%slatest", flagNamePrefix), "err", err)
+			}
+
+			logger.Infow("upload",
+				"bucket", info.Bucket,
+				"key", info.Key,
+				"etag", info.ETag,
+				"size", info.Size,
+				"location", info.Location,
+				"version_id", info.VersionID,
+				"expiration", info.Expiration,
+				"expiration_rule_id", info.ExpirationRuleID,
+			)
 		}
 
 		if err := <-errCh; err != nil {
