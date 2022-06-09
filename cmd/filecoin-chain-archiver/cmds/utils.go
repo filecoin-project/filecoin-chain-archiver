@@ -10,11 +10,11 @@ import (
 
 	"github.com/filecoin-project/go-jsonrpc"
 
-	cliutil "github.com/filecoin-project/lotus/cli/util"
 	"github.com/filecoin-project/filecoin-chain-archiver/pkg/config"
+	cliutil "github.com/filecoin-project/lotus/cli/util"
 )
 
-func NodeMultiaddrs(cfg *config.Config) ([]string, error) {
+func NodeMultiaddrs(cfg *config.ExportWorkerConfig) ([]string, error) {
 	var multiaddrs []string
 
 	for _, node := range cfg.Nodes {

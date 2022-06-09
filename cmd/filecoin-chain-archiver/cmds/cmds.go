@@ -9,7 +9,7 @@ import (
 
 var logger = log.Logger("filecoin-chain-archiver/cmds")
 
-var Commands = []*cli.Command{cmdCreate, cmdDefaultConfig, cmdService}
+var Commands = []*cli.Command{cmdCreate, cmdDefaultConfig, cmdService, cmdIndexService}
 
 func TrimDescription(desc string) string {
 	lines := strings.Split(desc, "\n")

@@ -153,12 +153,12 @@ var cmdCreate = &cli.Command{
 			return err
 		}
 
-		icfg, err := config.FromFile(flagConfigPath, &config.Config{})
+		icfg, err := config.FromFile(flagConfigPath, &config.ExportWorkerConfig{})
 		if err != nil {
 			return err
 		}
 
-		cfg := icfg.(*config.Config)
+		cfg := icfg.(*config.ExportWorkerConfig)
 
 		addrs, err := NodeMultiaddrs(cfg)
 		if err != nil {
@@ -338,7 +338,7 @@ var cmdCreate = &cli.Command{
 				ContentType:        "application/octet-stream",
 			})
 			if err != nil {
-				return fmt.Errorf("failed to upload", "object", fmt.Sprintf("%s%s.car", flagNamePrefix, name), "err", err)
+				return fmt.Errorf("failed to upload object (%s): %w", fmt.Sprintf("%s%s.car", flagNamePrefix, name), err)
 			}
 
 			logger.Infow("upload",
