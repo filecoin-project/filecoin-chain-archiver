@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/url"
 	"strings"
 	"syscall"
@@ -241,10 +242,22 @@ var cmdCreate = &cli.Command{
 			return err
 		}
 
+		var iteration int
+		if cctx.IsSet("interval") {
+			iteration = int(uint64(height)/uint64(flagInterval)) % len(nodes)
+		} else {
+			iteration = rand.Int() % len(nodes)
+		}
+
+		logger.Infow("iteration", "value", iteration)
+		cm.ShiftStartNode(iteration)
+
 		node, peerID, err := cm.GetNodeWithTipSet(ctx, tsk, filterList)
 		if err != nil {
 			return err
 		}
+
+		logger.Infow("node", "peer_id", peerID)
 
 		lock, locked, err := nl.Lock(ctx, peerID)
 		if err != nil {

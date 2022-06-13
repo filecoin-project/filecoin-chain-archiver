@@ -85,6 +85,18 @@ func (cm *ConsensusManager) GetTipset(ctx context.Context, height abi.ChainEpoch
 	return pick, nil
 }
 
+func (cm *ConsensusManager) ShiftStartNode(iteration int) {
+	nodes := make([]api.FullNode, len(cm.nodes))
+
+	for i := 0; i < len(cm.nodes); i++ {
+		source := (i + iteration) % len(cm.nodes)
+		logger.Debugw("shift start node", "assignment", i, "source")
+		nodes[i] = cm.nodes[source]
+	}
+
+	cm.nodes = nodes
+}
+
 func (cm *ConsensusManager) GetNodeWithTipSet(ctx context.Context, tsk types.TipSetKey, filterList []string) (api.FullNode, string, error) {
 	peerFilter := make(map[string]struct{})
 	for _, peer := range filterList {
