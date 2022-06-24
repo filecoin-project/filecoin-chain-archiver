@@ -323,6 +323,10 @@ var cmdCreate = &cli.Command{
 		if flagDiscard {
 			logger.Infow("discarding output")
 			io.Copy(ioutil.Discard, r)
+
+			if err := <-errCh; err != nil {
+				return err
+			}
 		} else {
 			host := u.Hostname()
 			port := u.Port()
@@ -365,6 +369,10 @@ var cmdCreate = &cli.Command{
 				"expiration_rule_id", info.ExpirationRuleID,
 			)
 
+			if err := <-errCh; err != nil {
+				return err
+			}
+
 			latestLocation, err := url.QueryUnescape(info.Location)
 			if err != nil {
 				logger.Errorw("failed to decode location url", "location", info.Location, "err", err)
@@ -399,10 +407,6 @@ var cmdCreate = &cli.Command{
 				"expiration", info.Expiration,
 				"expiration_rule_id", info.ExpirationRuleID,
 			)
-		}
-
-		if err := <-errCh; err != nil {
-			return err
 		}
 
 		logger.Infow("finished", "digiest", fmt.Sprintf("%x", h.Sum(nil)))
