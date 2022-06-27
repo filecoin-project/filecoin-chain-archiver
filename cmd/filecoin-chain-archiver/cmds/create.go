@@ -176,7 +176,7 @@ var cmdCreate = &cli.Command{
 					continue
 				}
 
-				return err
+				logger.Warnw("failed to create node client", "err", err)
 			}
 
 			defer closer()
