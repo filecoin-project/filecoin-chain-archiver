@@ -173,10 +173,11 @@ var cmdCreate = &cli.Command{
 			if err != nil {
 				if errors.Is(err, syscall.ECONNREFUSED) {
 					logger.Warnw("failed to dial node", "err", err)
-					continue
+				} else {
+					logger.Warnw("failed to create node client", "err", err)
 				}
 
-				logger.Warnw("failed to create node client", "err", err)
+				continue
 			}
 
 			defer closer()
