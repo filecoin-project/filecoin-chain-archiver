@@ -28,13 +28,14 @@ jobs:
     - name: Extract metadata (tags, labels) for Docker
       id: meta
       uses: docker/metadata-action@v3
-      tags: |
-        type=schedule
-        type=semver,pattern={{version}}
-        type=semver,pattern={{major}}.{{minor}}
-        type=semver,pattern={{major}}
-        type=ref,event=branch
-        type=ref,event=pr
+      with:
+        tags: |
+          type=schedule
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          type=ref,event=branch
+          type=ref,event=pr
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
