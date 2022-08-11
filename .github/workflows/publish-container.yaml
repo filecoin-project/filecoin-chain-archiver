@@ -29,6 +29,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v3
       with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
           type=schedule
           type=semver,pattern={{version}}
@@ -36,8 +37,6 @@ jobs:
           type=semver,pattern={{major}}
           type=ref,event=branch
           type=ref,event=pr
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
     - name: Log in to the Container registry
       if: github.event_name != 'pull_request'
