@@ -224,9 +224,10 @@ var cmdCreate = &cli.Command{
 
 		t := export.TimeAtHeight(gtp, confidenceHeight, 30*time.Second)
 
-		logger.Infow("snapshot", "snapshot_height", height, "current_height", expected, "confidence_height", confidenceHeight, "run_at", t)
-
+		// Snapshots started
+		logger.Infow("snapshot job started", "snapshot_height", height, "current_height", expected, "confidence_height", confidenceHeight, "run_at", t)
 		time.Sleep(time.Until(t))
+		bt := time.Now()
 
 		tsk, err := cm.GetTipset(ctx, height)
 		if err != nil {
@@ -321,14 +322,18 @@ var cmdCreate = &cli.Command{
 			}
 		}()
 
+		var snapshotSize int64
+
 		if flagDiscard {
 			logger.Infow("discarding output")
 			io.Copy(ioutil.Discard, r)
+			snapshotSize = 0
 
 			if err := <-errCh; err != nil {
 				return err
 			}
 		} else {
+
 			host := u.Hostname()
 			port := u.Port()
 			if port == "" {
@@ -359,7 +364,7 @@ var cmdCreate = &cli.Command{
 				return fmt.Errorf("failed to upload object (%s): %w", fmt.Sprintf("%s%s.car", flagNamePrefix, name), err)
 			}
 
-			logger.Infow("upload",
+			logger.Infow("snapshot upload",
 				"bucket", info.Bucket,
 				"key", info.Key,
 				"etag", info.ETag,
@@ -369,6 +374,7 @@ var cmdCreate = &cli.Command{
 				"expiration", info.Expiration,
 				"expiration_rule_id", info.ExpirationRuleID,
 			)
+			snapshotSize = info.Size
 
 			if err := <-errCh; err != nil {
 				return err
@@ -398,7 +404,7 @@ var cmdCreate = &cli.Command{
 				return fmt.Errorf("failed to write latest", "object", fmt.Sprintf("%slatest", flagNamePrefix), "err", err)
 			}
 
-			logger.Infow("upload",
+			logger.Infow("latest upload",
 				"bucket", info.Bucket,
 				"key", info.Key,
 				"etag", info.ETag,
@@ -410,7 +416,7 @@ var cmdCreate = &cli.Command{
 			)
 		}
 
-		logger.Infow("finished", "digiest", fmt.Sprintf("%x", h.Sum(nil)))
+		logger.Infow("snapshot job finished", "digiest", fmt.Sprintf("%x", h.Sum(nil)), "elapsed", int64(time.Since(bt).Round(time.Second).Seconds()), "size", snapshotSize, "peer", peerID)
 
 		return nil
 	},
