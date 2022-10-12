@@ -73,6 +73,11 @@ var cmdCreate = &cli.Command{
 			EnvVars: []string{"FCA_CREATE_BUCKET_ENDPOINT"},
 		},
 		&cli.StringFlag{
+			Name:    "retrieval-endpoint-prefix",
+			Usage:   "URL prefix where uploaded object can be retrieved from",
+			EnvVars: []string{"FCA_CREATE_RETRIEVAL_ENDPOINT_PREFIX"},
+		},
+		&cli.StringFlag{
 			Name:    "access-key",
 			Usage:   "access key for upload",
 			EnvVars: []string{"FCA_CREATE_ACCESS_KEY"},
@@ -138,6 +143,7 @@ var cmdCreate = &cli.Command{
 		flagBucketAccessKey := cctx.String("access-key")
 		flagBucketSecretKey := cctx.String("secret-key")
 		flagNamePrefix := cctx.String("name-prefix")
+		flagRetrievalEndpointPrefix := cctx.String("retrieval-endpoint-prefix")
 		flagBucket := cctx.String("bucket")
 		flagDiscard := cctx.Bool("discard")
 		flagProgressUpdate := cctx.Duration("progress-update")
@@ -380,10 +386,10 @@ var cmdCreate = &cli.Command{
 				return err
 			}
 
-			latestLocation, err := url.QueryUnescape(info.Location)
+			latestLocation, err := url.JoinPath(flagRetrievalEndpointPrefix, info.Key)
 			if err != nil {
-				logger.Errorw("failed to decode location url", "location", info.Location, "err", err)
-				latestLocation = info.Location
+				logger.Errorw("failed to join request path", "request_prefix", flagRetrievalEndpointPrefix, "key", info.Key)
+				return fmt.Errorf("failed to join request path: %w", err)
 			}
 
 			sha256sum := fmt.Sprintf("%x *%s.car\n", h.Sum(nil), name)
@@ -397,8 +403,7 @@ var cmdCreate = &cli.Command{
 			}
 
 			info, err = minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%slatest", flagNamePrefix), strings.NewReader(latestLocation), -1, minio.PutObjectOptions{
-				WebsiteRedirectLocation: latestLocation,
-				ContentType:             "text/plain",
+				ContentType: "text/plain",
 			})
 			if err != nil {
 				return fmt.Errorf("failed to write latest", "object", fmt.Sprintf("%slatest", flagNamePrefix), "err", err)

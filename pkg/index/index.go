@@ -2,13 +2,14 @@ package index
 
 import (
 	"context"
-	"fmt"
+	"io"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/minio/minio-go/v7"
-
 	"github.com/ipfs/go-log/v2"
+	"github.com/minio/minio-go/v7"
+	"golang.org/x/xerrors"
 )
 
 var (
@@ -23,7 +24,7 @@ type IndexS3Resolver struct {
 }
 
 type s3ClientInterface interface {
-	StatObject(ctx context.Context, bucketName, objectName string, opts minio.StatObjectOptions) (minio.ObjectInfo, error)
+	GetObject(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (*minio.Object, error)
 }
 
 type Resolver interface {
@@ -38,16 +39,19 @@ func NewIndexS3Resolver(client s3ClientInterface, bucket string) *IndexS3Resolve
 }
 
 func (i *IndexS3Resolver) Resolve(ctx context.Context, obj string) (string, error) {
-	objInfo, err := i.client.StatObject(ctx, i.bucket, obj, minio.StatObjectOptions{})
+	object, err := i.client.GetObject(ctx, i.bucket, obj, minio.GetObjectOptions{})
 	if err != nil {
-		return "", err
+		return "", xerrors.Errorf("failed to resolve link: %w", err)
 	}
 
-	if v, ok := objInfo.Metadata["X-Amz-Website-Redirect-Location"]; ok {
-		return v[0], nil
+	data, err := io.ReadAll(object)
+	if err != nil {
+		return "", xerrors.Errorf("failed to resolve link: %w", err)
 	}
 
-	return "", fmt.Errorf("failed to resolve link")
+	logger.Infow("resolved", "link", string(data))
+
+	return strings.TrimSpace(string(data)), nil
 }
 
 type cacheMetadata struct {
