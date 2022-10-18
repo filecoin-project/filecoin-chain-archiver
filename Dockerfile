@@ -1,4 +1,4 @@
-FROM golang:buster as builder
+FROM golang:1.19.2-buster as builder
 
 RUN apt-get update && apt-get install -y ca-certificates
 
@@ -15,7 +15,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o filecoin-chain-archiver ./cmd/filecoin-chain-archiver
+RUN make all
 
 FROM debian:buster
 
