@@ -12,9 +12,9 @@ import (
 var logger = log.Logger("filecoin-chain-archiver/pkg/nodelocker")
 
 type NodeLock struct {
-	PeerID  string
-	Expiry  time.Time
-	Aquired bool
+	PeerID   string
+	Expiry   time.Time
+	Acquired bool
 }
 
 type nodeLock struct {
@@ -59,9 +59,9 @@ func (snl *NodeLocker) FetchLocks(ctx context.Context) ([]NodeLock, error) {
 	for e := snl.locks.Front(); e != nil; e = e.Next() {
 		lock := e.Value.(nodeLock)
 		locks = append(locks, NodeLock{
-			PeerID:  lock.peerID,
-			Expiry:  lock.expiry,
-			Aquired: true,
+			PeerID:   lock.peerID,
+			Expiry:   lock.expiry,
+			Acquired: true,
 		})
 	}
 
@@ -86,16 +86,16 @@ func (snl *NodeLocker) Lock(ctx context.Context, peerID, secret string) (NodeLoc
 
 				logger.Infow("updated lock", "expiry", lock.expiry, "peer", lock.peerID, "secret", lock.secret)
 				return NodeLock{
-					PeerID:  lock.peerID,
-					Expiry:  lock.expiry,
-					Aquired: true,
+					PeerID:   lock.peerID,
+					Expiry:   lock.expiry,
+					Acquired: true,
 				}, nil
 			} else {
 				logger.Infow("lock failed", "expiry", lock.expiry, "peer", lock.peerID, "secret", lock.secret)
 				return NodeLock{
-					PeerID:  lock.peerID,
-					Expiry:  lock.expiry,
-					Aquired: false,
+					PeerID:   lock.peerID,
+					Expiry:   lock.expiry,
+					Acquired: false,
 				}, nil
 			}
 		}
@@ -112,8 +112,8 @@ func (snl *NodeLocker) Lock(ctx context.Context, peerID, secret string) (NodeLoc
 	snl.locks.PushBack(lock)
 
 	return NodeLock{
-		PeerID:  lock.peerID,
-		Expiry:  lock.expiry,
-		Aquired: true,
+		PeerID:   lock.peerID,
+		Expiry:   lock.expiry,
+		Acquired: true,
 	}, nil
 }

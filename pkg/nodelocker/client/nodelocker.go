@@ -5,9 +5,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/filecoin-project/lotus/cli/util"
 	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker"
 	"github.com/filecoin-project/filecoin-chain-archiver/pkg/nodelocker/api/apiclient"
+	cliutil "github.com/filecoin-project/lotus/cli/util"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyz"
@@ -46,7 +46,7 @@ func (nl *NodeLock) Renew(ctx context.Context) (bool, error) {
 
 	nl.expiry = lock.Expiry
 
-	return lock.Aquired, nil
+	return lock.Acquired, nil
 }
 
 func (nl *NodeLock) Expiry() time.Time {
