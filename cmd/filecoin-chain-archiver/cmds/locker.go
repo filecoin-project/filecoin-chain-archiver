@@ -116,7 +116,7 @@ var cmdService = &cli.Command{
 								err = fmt.Errorf("lock not aquired")
 								return err
 							}
-							time.Sleep(10 * time.Second)
+							time.Sleep(time.Second + time.Until(lock.Expiry))
 						}
 					},
 				},
