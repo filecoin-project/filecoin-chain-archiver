@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-jsonrpc"
-	"github.com/filecoin-project/lotus/cli/util"
+	cliutil "github.com/filecoin-project/lotus/cli/util"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
 
@@ -87,8 +87,14 @@ var cmdService = &cli.Command{
 				},
 				{
 					Name:  "lock",
-					Usage: "list current locks",
-					Flags: []cli.Flag{},
+					Usage: "acquire a lock",
+					Flags: []cli.Flag{
+						&cli.BoolFlag{
+							Name:    "wait",
+							Aliases: []string{"w"},
+							Value:   false,
+						},
+					},
 					Action: func(cctx *cli.Context) error {
 						ctx := context.Background()
 
@@ -98,17 +104,20 @@ var cmdService = &cli.Command{
 							return err
 						}
 
-						fmt.Println(cctx.Args().Get(0))
-						fmt.Println(cctx.Args().Get(1))
-
-						lock, err := api.Lock(ctx, cctx.Args().Get(0), cctx.Args().Get(1))
-						if err != nil {
-							return err
+						for {
+							lock, err := api.Lock(ctx, cctx.Args().Get(0), cctx.Args().Get(1))
+							if err != nil {
+								return err
+							}
+							fmt.Printf("peerid:%s, acquired:%t, expiry:%s\n", lock.PeerID, lock.Acquired, lock.Expiry)
+							if lock.Acquired {
+								return nil
+							} else if !lock.Acquired && !cctx.Bool("wait") {
+								err = fmt.Errorf("lock not aquired")
+								return err
+							}
+							time.Sleep(time.Second + time.Until(lock.Expiry))
 						}
-
-						fmt.Printf("%s, %T, %s", lock.PeerID, lock.Aquired, lock.Expiry)
-
-						return nil
 					},
 				},
 				{
