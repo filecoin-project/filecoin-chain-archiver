@@ -10,7 +10,7 @@ successfully.
 
 ## Building & Dependencies
 
-- Go 1.16 or higher
+- Go 1.19 or higher
 
 ```
 make all
