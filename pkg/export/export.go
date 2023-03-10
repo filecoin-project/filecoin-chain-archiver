@@ -134,6 +134,7 @@ func (e *Export) done() {
 
 func (e *Export) Export(ctx context.Context) error {
 	defer e.done()
+	/*
 	if err := e.node.Shutdown(ctx); err != nil {
 		return err
 	}
@@ -141,9 +142,9 @@ func (e *Export) Export(ctx context.Context) error {
 	if err := waitAPIDown(ctx, e.node); err != nil {
 		return fmt.Errorf("node failed to go offline: %w", err)
 	}
-
+	*/
 	if err := waitAPI(ctx, e.node); err != nil {
-		return fmt.Errorf("node failed to come back online: %w", err)
+		return fmt.Errorf("node is not online: %w", err)
 	}
 
 	logger.Infow("starting export")
