@@ -8,6 +8,8 @@ import (
 	"io"
 	"math/rand"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -60,16 +62,6 @@ func AutoCloser(rc io.ReadCloser) io.Reader {
 type multi struct {
 	io.Writer
 	cs []io.Closer
-}
-
-func MultiWriteCloser(ws ...io.Writer) io.WriteCloser {
-	m := &multi{Writer: io.MultiWriter(ws...)}
-	for _, w := range ws {
-		if c, ok := w.(io.Closer); ok {
-			m.cs = append(m.cs, c)
-		}
-	}
-	return m
 }
 
 func (m *multi) Close() error {
@@ -187,12 +179,6 @@ var cmdCreate = &cli.Command{
 			EnvVars: []string{"FCA_CREATE_HEIGHT"},
 			Value:   0,
 		},
-		&cli.IntFlag{
-			Name:    "stateroot-count",
-			Usage:   "number of stateroots to included in snapshot",
-			EnvVars: []string{"FCA_CREATE_STATEROOT_COUNT"},
-			Value:   2000,
-		},
 		&cli.DurationFlag{
 			Name:    "progress-update",
 			Usage:   "how frequenty to provide provide update logs",
@@ -217,7 +203,6 @@ var cmdCreate = &cli.Command{
 		flagConfidence := cctx.Int("confidence")
 		flagHeight := cctx.Int("height")
 		flagAfter := cctx.Int("after")
-		flagStaterootCount := cctx.Int("stateroot-count")
 
 		u, err := url.Parse(flagBucketEndpoint)
 		if err != nil {
@@ -299,7 +284,13 @@ var cmdCreate = &cli.Command{
 		time.Sleep(time.Until(t))
 		bt := time.Now()
 
-		tsk, err := cm.GetTipset(ctx, height)
+		headTs, err := cm.GetTipset(ctx, height)
+		if err != nil {
+			return err
+		}
+
+		tailHeight := height - 2880
+		tailTs, err := cm.GetTipset(ctx, tailHeight)
 		if err != nil {
 			return err
 		}
@@ -324,7 +315,7 @@ var cmdCreate = &cli.Command{
 		logger.Infow("iteration", "value", iteration)
 		cm.ShiftStartNode(iteration)
 
-		node, peerID, err := cm.GetNodeWithTipSet(ctx, tsk, filterList)
+		node, peerID, err := cm.GetNodeWithTipSet(ctx, headTs, filterList)
 		if err != nil {
 			return err
 		}
@@ -340,12 +331,7 @@ var cmdCreate = &cli.Command{
 			return xerrors.Errorf("failed to aquire lock")
 		}
 
-		rr, wr := io.Pipe()
-		rc, wc := io.Pipe()
-
-		mw := MultiWriteCloser(wr, wc)
-
-		e := export.NewExport(node, tsk, abi.ChainEpoch(flagStaterootCount), true, mw)
+		e := export.NewExport(node, headTs, tailTs)
 		errCh := make(chan error)
 		go func() {
 			errCh <- e.Export(ctx)
@@ -372,21 +358,36 @@ var cmdCreate = &cli.Command{
 			}
 		}()
 
+		name, err := filepath.Glob("snapshot_" + string(tailHeight) + "_" + string(height) + "*.car")
+		if err != nil {
+			return err
+		}
+		rrfn := filepath.Join(cctx.String("repo"), name[0])
+		rr, err := os.OpenFile(rrfn, os.O_RDONLY, 444)
+		if err != nil {
+			return err
+		}
+		defer rr.Close()
+
+		cname := name[0] + ".zstd"
+		rcfn := filepath.Join(cctx.String("repo"), string(cname[0]))
+		rc, err := os.OpenFile(rcfn, os.O_RDONLY, 444)
+		if err != nil {
+			return err
+		}
+		defer rc.Close()
+
 		go func() {
-			var lastSize int
+			var lastSize int64
 			for {
 				select {
 				case <-time.After(flagProgressUpdate):
-					size, done := e.Progress()
+					size := e.Progress(rrfn)
 					if size == 0 {
 						continue
 					}
 
-					if done {
-						return
-					}
-
-					logger.Infow("update", "total", size, "speed", (size-lastSize)/int(flagProgressUpdate/time.Second))
+					logger.Infow("update", "total", size, "speed", (size-lastSize)/int64(flagProgressUpdate/time.Second))
 					lastSize = size
 				}
 			}
@@ -432,23 +433,21 @@ var cmdCreate = &cli.Command{
 				return err
 			}
 
-			t := export.TimeAtHeight(gtp, height, 30*time.Second)
+			//t := export.TimeAtHeight(gtp, height, 30*time.Second)
 
-			name := fmt.Sprintf("%d_%s", height, t.Format("2006_01_02T15_04_05Z"))
-
-			logger.Infow("object", "name", name)
+			logger.Infow("object", "name", name[0])
 
 			g, ctxGroup := errgroup.WithContext(ctx)
 			var siRaw *snapshotInfo
 			var siCompressed *snapshotInfo
 			g.Go(func() error {
 				var err error
-				siRaw, err = runUploadRaw(ctxGroup, minioClient, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name, peerID, bt, rr)
+				siRaw, err = runUploadRaw(ctxGroup, minioClient, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name[0], peerID, bt, rr)
 				return err
 			})
 			g.Go(func() error {
 				var err error
-				siCompressed, err = runUploadCompressed(ctxGroup, minioClient, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name, peerID, bt, rc)
+				siCompressed, err = runUploadCompressed(ctxGroup, minioClient, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name[0], peerID, bt, rc)
 				return err
 			})
 			if err := g.Wait(); err != nil {
