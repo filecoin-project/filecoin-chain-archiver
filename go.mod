@@ -6,7 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.1.0
 	github.com/filecoin-project/go-jsonrpc v0.2.3
 	github.com/filecoin-project/go-state-types v0.10.0
-	github.com/filecoin-project/lotus v1.21.0-rc1
+	github.com/filecoin-project/lotus v1.20.4-0.20230330155014-09459e581a6d
 	github.com/gorilla/mux v1.8.0
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/klauspost/compress v1.15.12
@@ -82,7 +82,7 @@ require (
 	github.com/ipfs/bbloom v0.0.4 // indirect
 	github.com/ipfs/go-block-format v0.1.1 // indirect
 	github.com/ipfs/go-blockservice v0.5.0 // indirect
-	github.com/ipfs/go-cid v0.3.2 // indirect
+	github.com/ipfs/go-cid v0.4.0 // indirect
 	github.com/ipfs/go-datastore v0.6.0 // indirect
 	github.com/ipfs/go-ds-badger2 v0.1.3 // indirect
 	github.com/ipfs/go-ds-leveldb v0.5.0 // indirect
@@ -98,11 +98,11 @@ require (
 	github.com/ipfs/go-ipld-cbor v0.0.6 // indirect
 	github.com/ipfs/go-ipld-format v0.4.0 // indirect
 	github.com/ipfs/go-ipld-legacy v0.1.1 // indirect
-	github.com/ipfs/go-libipfs v0.5.0 // indirect
+	github.com/ipfs/go-libipfs v0.7.0 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipfs/go-merkledag v0.9.0 // indirect
 	github.com/ipfs/go-metrics-interface v0.0.1 // indirect
-	github.com/ipfs/go-path v0.3.0 // indirect
+	github.com/ipfs/go-path v0.3.1 // indirect
 	github.com/ipfs/go-unixfs v0.4.3 // indirect
 	github.com/ipfs/go-verifcid v0.0.2 // indirect
 	github.com/ipfs/interface-go-ipfs-core v0.11.1 // indirect

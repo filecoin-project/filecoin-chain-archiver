@@ -179,11 +179,21 @@ var cmdCreate = &cli.Command{
 			EnvVars: []string{"FCA_CREATE_HEIGHT"},
 			Value:   0,
 		},
+		&cli.StringFlag{
+			Name:   "filename",
+			Usage:  "name of exported CAR file for internal chain export",
+			EnvVars: []string{"FCA_EXPORT_FILENAME"},
+		},
 		&cli.DurationFlag{
 			Name:    "progress-update",
 			Usage:   "how frequenty to provide provide update logs",
 			EnvVars: []string{"FCA_CREATE_PROGRESS_UPDATE"},
 			Value:   60 * time.Second,
+		},
+		&cli.StringFlag{
+			Name:   "export-dir",
+			Usage:  "directory where to save the exported CAR file",
+			EnvVars: []string{"FCA_EXPORT_DIR"},
 		},
 	},
 	Action: func(cctx *cli.Context) error {
@@ -203,6 +213,8 @@ var cmdCreate = &cli.Command{
 		flagConfidence := cctx.Int("confidence")
 		flagHeight := cctx.Int("height")
 		flagAfter := cctx.Int("after")
+		flagExportDir := cctx.String("export-dir")
+		flagFileName := cctx.String("filename")
 
 		u, err := url.Parse(flagBucketEndpoint)
 		if err != nil {
@@ -331,7 +343,7 @@ var cmdCreate = &cli.Command{
 			return xerrors.Errorf("failed to aquire lock")
 		}
 
-		e := export.NewExport(node, headTs, tailTs)
+		e := export.NewExport(node, headTs, tailTs, flagFileName, flagExportDir)
 		errCh := make(chan error)
 		go func() {
 			errCh <- e.Export(ctx)
@@ -358,35 +370,34 @@ var cmdCreate = &cli.Command{
 			}
 		}()
 
-		name, err := filepath.Glob("snapshot_" + string(tailHeight) + "_" + string(height) + "*.car")
-		if err != nil {
-			return err
+		rrPath := filepath.Join(flagExportDir, flagFileName)
+		for {
+			info, err := os.Stat(rrPath)
+			if os.IsNotExist(err) {
+				logger.Infow("waiting for snapshot car file to begin writing")
+				time.Sleep(time.Second * 15)
+				continue
+			} else if info.IsDir() {
+				return xerrors.Errorf("trying to open directory instead of car file")
+			}
+			break
 		}
-		rrfn := filepath.Join(cctx.String("repo"), name[0])
-		rr, err := os.OpenFile(rrfn, os.O_RDONLY, 444)
+		rr, err := os.OpenFile(rrPath, os.O_RDONLY, 444)
 		if err != nil {
 			return err
 		}
 		defer rr.Close()
 
-		cname := name[0] + ".zstd"
-		rcfn := filepath.Join(cctx.String("repo"), string(cname[0]))
-		rc, err := os.OpenFile(rcfn, os.O_RDONLY, 444)
-		if err != nil {
-			return err
-		}
-		defer rc.Close()
-
 		go func() {
 			var lastSize int64
+			fmt.Printf("rrPath: %v", rrPath)
 			for {
 				select {
 				case <-time.After(flagProgressUpdate):
-					size := e.Progress(rrfn)
+					size := e.Progress(rrPath)
 					if size == 0 {
 						continue
 					}
-
 					logger.Infow("update", "total", size, "speed", (size-lastSize)/int64(flagProgressUpdate/time.Second))
 					lastSize = size
 				}
@@ -399,10 +410,6 @@ var cmdCreate = &cli.Command{
 
 			g.Go(func() error {
 				_, err := io.Copy(io.Discard, rr)
-				return err
-			})
-			g.Go(func() error {
-				_, err := io.Copy(io.Discard, rc)
 				return err
 			})
 
@@ -435,19 +442,13 @@ var cmdCreate = &cli.Command{
 
 			//t := export.TimeAtHeight(gtp, height, 30*time.Second)
 
-			logger.Infow("object", "name", name[0])
+			logger.Infow("object", "name", flagFileName)
 
 			g, ctxGroup := errgroup.WithContext(ctx)
-			var siRaw *snapshotInfo
 			var siCompressed *snapshotInfo
 			g.Go(func() error {
 				var err error
-				siRaw, err = runUploadRaw(ctxGroup, minioClient, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name[0], peerID, bt, rr)
-				return err
-			})
-			g.Go(func() error {
-				var err error
-				siCompressed, err = runUploadCompressed(ctxGroup, minioClient, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name[0], peerID, bt, rc)
+				siCompressed, err = runUploadCompressed(ctxGroup, minioClient, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, flagFileName + ".zstd", peerID, bt, rr)
 				return err
 			})
 			if err := g.Wait(); err != nil {
@@ -457,7 +458,7 @@ var cmdCreate = &cli.Command{
 				return err
 			}
 
-			sis := []*snapshotInfo{siRaw, siCompressed}
+			sis := []*snapshotInfo{siCompressed}
 
 			var sb strings.Builder
 			for _, x := range sis {
@@ -466,12 +467,12 @@ var cmdCreate = &cli.Command{
 
 			sha256sum := sb.String()
 
-			_, err = minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s%s.sha256sum", flagNamePrefix, name), strings.NewReader(sha256sum), -1, minio.PutObjectOptions{
-				ContentDisposition: fmt.Sprintf("attachment; filename=\"%s.sha256sum\"", name),
+			_, err = minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s%s.sha256sum", flagNamePrefix, flagFileName), strings.NewReader(sha256sum), -1, minio.PutObjectOptions{
+				ContentDisposition: fmt.Sprintf("attachment; filename=\"%s.sha256sum\"", flagFileName),
 				ContentType:        "text/plain",
 			})
 			if err != nil {
-				logger.Errorw("failed to write sha256sum", "object", fmt.Sprintf("%s%s.sha256sum", flagNamePrefix, name), "err", err)
+				logger.Errorw("failed to write sha256sum", "object", fmt.Sprintf("%s%s.sha256sum", flagNamePrefix, flagFileName), "err", err)
 			}
 
 			for _, x := range sis {
@@ -501,50 +502,6 @@ var cmdCreate = &cli.Command{
 	},
 }
 
-func runUploadRaw(ctx context.Context, minioClient *minio.Client, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name, peerID string, bt time.Time, source io.Reader) (*snapshotInfo, error) {
-	h := sha256.New()
-	r := io.TeeReader(source, h)
-
-	filename := fmt.Sprintf("%s.car", name)
-
-	info, err := minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s%s", flagNamePrefix, filename), r, -1, minio.PutObjectOptions{
-		ContentDisposition: fmt.Sprintf("attachment; filename=\"%s\"", filename),
-		ContentType:        "application/octet-stream",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to upload object (%s): %w", fmt.Sprintf("%s%s", flagNamePrefix, filename), err)
-	}
-
-	logger.Infow("snapshot upload",
-		"bucket", info.Bucket,
-		"key", info.Key,
-		"etag", info.ETag,
-		"size", info.Size,
-		"location", info.Location,
-		"version_id", info.VersionID,
-		"expiration", info.Expiration,
-		"expiration_rule_id", info.ExpirationRuleID,
-	)
-
-	snapshotSize := info.Size
-
-	latestLocation, err := url.JoinPath(flagRetrievalEndpointPrefix, info.Key)
-	if err != nil {
-		logger.Errorw("failed to join request path", "request_prefix", flagRetrievalEndpointPrefix, "key", info.Key)
-		return nil, fmt.Errorf("failed to join request path: %w", err)
-	}
-
-	digest := fmt.Sprintf("%x", h.Sum(nil))
-
-	return &snapshotInfo{
-		digest:         digest,
-		size:           snapshotSize,
-		filename:       filename,
-		latestIndex:    "latest",
-		latestLocation: latestLocation,
-	}, nil
-}
-
 func runUploadCompressed(ctx context.Context, minioClient *minio.Client, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name, peerID string, bt time.Time, source io.Reader) (*snapshotInfo, error) {
 
 	r1, w1 := io.Pipe()
@@ -555,7 +512,7 @@ func runUploadCompressed(ctx context.Context, minioClient *minio.Client, flagBuc
 	h := sha256.New()
 	r := io.TeeReader(r1, h)
 
-	filename := fmt.Sprintf("%s.car.zst", name)
+	filename := name
 
 	info, err := minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s%s", flagNamePrefix, filename), r, -1, minio.PutObjectOptions{
 		ContentDisposition: fmt.Sprintf("attachment; filename=\"%s\"", filename),
