@@ -370,48 +370,9 @@ var cmdCreate = &cli.Command{
 			}
 		}()
 
-		rrPath := filepath.Join(flagExportDir, flagFileName)
-		for {
-			info, err := os.Stat(rrPath)
-			if os.IsNotExist(err) {
-				logger.Infow("waiting for snapshot car file to begin writing")
-				time.Sleep(time.Second * 15)
-				continue
-			} else if info.IsDir() {
-				return xerrors.Errorf("trying to open directory instead of car file")
-			}
-			break
-		}
-		rr, err := os.OpenFile(rrPath, os.O_RDONLY, 444)
-		if err != nil {
-			return err
-		}
-		defer rr.Close()
-
-		go func() {
-			var lastSize int64
-			fmt.Printf("rrPath: %v", rrPath)
-			for {
-				select {
-				case <-time.After(flagProgressUpdate):
-					size := e.Progress(rrPath)
-					if size == 0 {
-						continue
-					}
-					logger.Infow("update", "total", size, "speed", (size-lastSize)/int64(flagProgressUpdate/time.Second))
-					lastSize = size
-				}
-			}
-		}()
-
 		if flagDiscard {
 			logger.Infow("discarding output")
 			g, _ := errgroup.WithContext(ctx)
-
-			g.Go(func() error {
-				_, err := io.Copy(io.Discard, rr)
-				return err
-			})
 
 			if err := g.Wait(); err != nil {
 				return err
@@ -421,6 +382,40 @@ var cmdCreate = &cli.Command{
 				return err
 			}
 		} else {
+			rrPath := filepath.Join(flagExportDir, flagFileName)
+			for {
+				info, err := os.Stat(rrPath)
+				if os.IsNotExist(err) {
+					logger.Infow("waiting for snapshot car file to begin writing")
+					time.Sleep(time.Second * 15)
+					continue
+				} else if info.IsDir() {
+					return xerrors.Errorf("trying to open directory instead of car file")
+				}
+				break
+			}
+			rr, err := os.OpenFile(rrPath, os.O_RDONLY, 444)
+			if err != nil {
+				return err
+			}
+			defer rr.Close()
+
+			go func() {
+				var lastSize int64
+				fmt.Printf("rrPath: %v", rrPath)
+				for {
+					select {
+					case <-time.After(flagProgressUpdate):
+						size := e.Progress(rrPath)
+						if size == 0 {
+							continue
+						}
+						logger.Infow("update", "total", size, "speed", (size-lastSize)/int64(flagProgressUpdate/time.Second))
+						lastSize = size
+					}
+				}
+			}()
+
 			host := u.Hostname()
 			port := u.Port()
 			if port == "" {
