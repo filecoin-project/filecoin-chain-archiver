@@ -98,7 +98,7 @@ type Export struct {
 	stateroots bool
 	workers    int
 	exportName string
-	exportDir string
+	exportDir  string
 
 	sizeMu   sync.Mutex
 	size     int
@@ -116,7 +116,7 @@ func NewExport(node api.FullNode, head, tail types.TipSetKey, name, dir string) 
 		stateroots: true,
 		workers:    50,
 		exportName: name,
-		exportDir: dir,
+		exportDir:  dir,
 	}
 }
 
@@ -152,8 +152,11 @@ func (e *Export) Export(ctx context.Context) error {
 	logger.Infow("starting export")
 	// lotus chain export-range --internal --messages --receipts --stateroots --workers 50 --head "@${END}" --tail "@${START}" --write-buffer=5000000 export.car
 	err := e.node.ChainExportRangeInternal(ctx, e.head, e.tail, api.ChainExportConfig{
-		FileName: e.exportName,
-		ExportDir: e.exportDir,
+		FileName:          e.exportName,
+		ExportDir:         e.exportDir,
+		IncludeMessages:   e.messages,
+		IncludeReceipts:   e.receipts,
+		IncludeStateRoots: e.stateroots,
 	})
 	if err != nil {
 		return err

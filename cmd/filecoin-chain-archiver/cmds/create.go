@@ -179,9 +179,15 @@ var cmdCreate = &cli.Command{
 			EnvVars: []string{"FCA_CREATE_HEIGHT"},
 			Value:   0,
 		},
+		&cli.IntFlag{
+			Name:    "stateroot-count",
+			Usage:   "number of stateroots to included in snapshot",
+			EnvVars: []string{"FCA_CREATE_STATEROOT_COUNT"},
+			Value:   2000,
+		},
 		&cli.StringFlag{
-			Name:   "filename",
-			Usage:  "name of exported CAR file for internal chain export",
+			Name:    "filename",
+			Usage:   "name of exported CAR file for internal chain export",
 			EnvVars: []string{"FCA_EXPORT_FILENAME"},
 		},
 		&cli.DurationFlag{
@@ -191,8 +197,8 @@ var cmdCreate = &cli.Command{
 			Value:   60 * time.Second,
 		},
 		&cli.StringFlag{
-			Name:   "export-dir",
-			Usage:  "directory where to save the exported CAR file",
+			Name:    "export-dir",
+			Usage:   "directory where to save the exported CAR file",
 			EnvVars: []string{"FCA_EXPORT_DIR"},
 		},
 	},
@@ -211,8 +217,9 @@ var cmdCreate = &cli.Command{
 		flagConfigPath := cctx.String("config-path")
 		flagInterval := cctx.Int("interval")
 		flagConfidence := cctx.Int("confidence")
-		flagHeight := cctx.Int("height")
 		flagAfter := cctx.Int("after")
+		flagHeight := cctx.Int("height")
+		flagStaterootCount := cctx.Int("stateroot-count")
 		flagExportDir := cctx.String("export-dir")
 		flagFileName := cctx.String("filename")
 
@@ -301,8 +308,8 @@ var cmdCreate = &cli.Command{
 			return err
 		}
 
-		tailHeight := height - 2880
-		tailTs, err := cm.GetTipset(ctx, tailHeight)
+		tailHeight := flagHeight - flagStaterootCount
+		tailTs, err := cm.GetTipset(ctx, abi.ChainEpoch(tailHeight))
 		if err != nil {
 			return err
 		}
@@ -443,7 +450,7 @@ var cmdCreate = &cli.Command{
 			var siCompressed *snapshotInfo
 			g.Go(func() error {
 				var err error
-				siCompressed, err = runUploadCompressed(ctxGroup, minioClient, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, flagFileName + ".zstd", peerID, bt, rr)
+				siCompressed, err = runUploadCompressed(ctxGroup, minioClient, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, flagFileName+".zstd", peerID, bt, rr)
 				return err
 			})
 			if err := g.Wait(); err != nil {
