@@ -43,43 +43,46 @@ func Compress(in io.Reader, out io.Writer) error {
 	return enc.Close()
 }
 
-type autocloser struct {
-	rc io.ReadCloser
-}
-
-func (ac autocloser) Read(p []byte) (n int, err error) {
-	n, err = ac.rc.Read(p)
-	if err != nil {
-		_ = ac.rc.Close()
-	}
-	return
-}
-
-func AutoCloser(rc io.ReadCloser) io.Reader {
-	return &autocloser{rc}
-}
-
-type multi struct {
-	io.Writer
-	cs []io.Closer
-}
-
-func (m *multi) Close() error {
-	var first error
-	for _, c := range m.cs {
-		if err := c.Close(); err != nil && first == nil {
-			first = err
-		}
-	}
-	return first
-}
-
 type snapshotInfo struct {
 	digest         string
 	size           int64
 	filename       string
 	latestIndex    string
 	latestLocation string
+}
+
+type snapshotReader struct {
+    data []byte
+    fileLocation string
+    errCh chan error
+}
+
+func (sr *snapshotReader) Read(p []byte) (n int, err error)  {
+	r, err := os.OpenFile(sr.fileLocation, os.O_RDONLY, 444)
+	if err != nil {
+		return n, err
+	}
+	defer r.Close()
+	for {
+		n, err := r.Read(p)
+		if err != nil && err != io.EOF {
+			return n, err
+		}
+		select {
+		case err  := <- sr.errCh:
+			if err != nil {
+				return n, err
+			}
+			return n, io.EOF
+		}
+	}
+}
+
+func newSnapshotReader(f string, errChan chan error) *snapshotReader {
+	return &snapshotReader{
+		fileLocation: f,
+		errCh: errChan,
+	}
 }
 
 var cmdCreate = &cli.Command{
@@ -401,15 +404,11 @@ var cmdCreate = &cli.Command{
 				}
 				break
 			}
-			rr, err := os.OpenFile(rrPath, os.O_RDONLY, 444)
-			if err != nil {
-				return err
-			}
-			defer rr.Close()
+
+			rr := newSnapshotReader(rrPath, errCh)
 
 			go func() {
 				var lastSize int64
-				fmt.Printf("rrPath: %v", rrPath)
 				for {
 					select {
 					case <-time.After(flagProgressUpdate):
