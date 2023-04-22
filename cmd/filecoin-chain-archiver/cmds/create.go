@@ -52,37 +52,27 @@ type snapshotInfo struct {
 }
 
 type snapshotReader struct {
-    data []byte
-    fileLocation string
-    errCh chan error
+	reader io.Reader
+	errCh  chan error
 }
 
-func (sr *snapshotReader) Read(p []byte) (n int, err error)  {
-	r, err := os.OpenFile(sr.fileLocation, os.O_RDONLY, 444)
-	if err != nil {
-		return n, err
-	}
-	defer r.Close()
-	for {
-		n, err := r.Read(p)
-		if err != nil && err != io.EOF {
+func (sr *snapshotReader) Read(p []byte) (n int, err error) {
+	n, _ = sr.reader.Read(p)
+	select {
+	case err := <-sr.errCh:
+		if err != nil {
 			return n, err
 		}
-		select {
-		case err  := <- sr.errCh:
-			if err != nil {
-				return n, err
-			}
-			return n, io.EOF
-		default:
-		}
+		return n, io.EOF
+	default:
 	}
+	return n, nil
 }
 
-func newSnapshotReader(f string, errChan chan error) *snapshotReader {
+func newSnapshotReader(reader io.Reader, errChan chan error) *snapshotReader {
 	return &snapshotReader{
-		fileLocation: f,
-		errCh: errChan,
+		reader: reader,
+		errCh:  errChan,
 	}
 }
 
@@ -394,7 +384,12 @@ var cmdCreate = &cli.Command{
 			break
 		}
 
-		rr := newSnapshotReader(rrPath, errCh)
+		f, err := os.OpenFile(rrPath, os.O_RDONLY, 444)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		rr := newSnapshotReader(f, errCh)
 
 		go func() {
 			var lastSize int64
@@ -407,11 +402,11 @@ var cmdCreate = &cli.Command{
 					}
 					logger.Infow("update", "total", size, "speed", (size-lastSize)/int64(flagProgressUpdate/time.Second))
 					lastSize = size
-                case err := <- errCh:
-                    if err != nil {
-                           break
-                    }
-                }
+				case err := <-errCh:
+					if err != nil {
+						break
+					}
+				}
 			}
 		}()
 
