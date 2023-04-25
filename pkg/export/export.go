@@ -3,7 +3,8 @@ package export
 import (
 	"context"
 	"fmt"
-	"io"
+	"os"
+	//"io"
 	"sync"
 	"time"
 
@@ -12,8 +13,7 @@ import (
 	"github.com/filecoin-project/lotus/chain/types"
 
 	"github.com/ipfs/go-log/v2"
-
-	"golang.org/x/xerrors"
+	//"golang.org/x/xerrors"
 )
 
 var logger = log.Logger("filecoin-chain-archiver/pkg/export")
@@ -31,10 +31,12 @@ func TimeAtHeight(gts *types.TipSet, height abi.ChainEpoch, blocktime time.Durat
 }
 
 /*
-             /- 500
-  |----------|----------|----------|----------|
-          |----------|
-    485 - /          \ - 585
+	/- 500
+
+|----------|----------|----------|----------|
+
+	      |----------|
+	485 - /          \ - 585
 */
 func GetNextSnapshotHeight(current, interval, confidence abi.ChainEpoch, after bool) abi.ChainEpoch {
 	next := ((current + interval) / interval) * interval
@@ -89,46 +91,47 @@ func waitAPI(ctx context.Context, node api.FullNode) error {
 
 type Export struct {
 	node       api.FullNode
-	tsk        types.TipSetKey
-	nroots     abi.ChainEpoch
-	oldmsgskip bool
-	output     io.WriteCloser
+	head       types.TipSetKey
+	tail       types.TipSetKey
+	messages   bool
+	receipts   bool
+	stateroots bool
+	workers    int
+	exportName string
+	exportDir  string
 
-	sizeMu sync.Mutex
-	size   int
-
+	sizeMu   sync.Mutex
+	size     int
 	finished bool
 }
 
-func NewExport(node api.FullNode, tsk types.TipSetKey, nroots abi.ChainEpoch, oldmsgskip bool, output io.WriteCloser) *Export {
+func NewExport(node api.FullNode, head, tail types.TipSetKey, name, dir string) *Export {
 	return &Export{
 		node:       node,
-		tsk:        tsk,
-		nroots:     nroots,
-		oldmsgskip: oldmsgskip,
-		output:     output,
+		head:       head,
+		tail:       tail,
 		sizeMu:     sync.Mutex{},
-		size:       0,
-		finished:   false,
+		messages:   true,
+		receipts:   true,
+		stateroots: true,
+		workers:    50,
+		exportName: name,
+		exportDir:  dir,
 	}
 }
 
-func (e *Export) Progress() (int, bool) {
+func (e *Export) Progress(path string) int64 {
 	defer e.sizeMu.Unlock()
 	e.sizeMu.Lock()
+	file, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		logger.Debugw("snapshot doesn't exist yet", "err", err)
+	}
 
-	return e.size, e.finished
-}
-
-func (e *Export) update(more int) int {
-	defer e.sizeMu.Unlock()
-	e.sizeMu.Lock()
-	e.size = e.size + more
-	return more
+	return file.Size()
 }
 
 func (e *Export) done() {
-	e.output.Close()
 	e.finished = true
 }
 
@@ -147,22 +150,16 @@ func (e *Export) Export(ctx context.Context) error {
 	}
 
 	logger.Infow("starting export")
-	stream, err := e.node.ChainExport(ctx, e.nroots, e.oldmsgskip, e.tsk)
+	// lotus chain export-range --internal --messages --receipts --stateroots --workers 50 --head "@${END}" --tail "@${START}" --write-buffer=5000000 export.car
+	err := e.node.ChainExportRangeInternal(ctx, e.head, e.tail, api.ChainExportConfig{
+		FileName:          e.exportName,
+		ExportDir:         e.exportDir,
+		IncludeMessages:   e.messages,
+		IncludeReceipts:   e.receipts,
+		IncludeStateRoots: e.stateroots,
+	})
 	if err != nil {
 		return err
-	}
-
-	var last bool
-	for b := range stream {
-		last = e.update(len(b)) == 0
-
-		if _, err := e.output.Write(b); err != nil {
-			return err
-		}
-	}
-
-	if !last {
-		return xerrors.Errorf("incomplete export (remote connection lost?)")
 	}
 
 	return nil
