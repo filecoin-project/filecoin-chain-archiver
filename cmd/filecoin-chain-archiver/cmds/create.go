@@ -41,22 +41,6 @@ func Compress(in io.Reader, out io.Writer) error {
 	return enc.Close()
 }
 
-type autocloser struct {
-	rc io.ReadCloser
-}
-
-func (ac autocloser) Read(p []byte) (n int, err error) {
-	n, err = ac.rc.Read(p)
-	if err != nil {
-		_ = ac.rc.Close()
-	}
-	return
-}
-
-func AutoCloser(rc io.ReadCloser) io.Reader {
-	return &autocloser{rc}
-}
-
 type multi struct {
 	io.Writer
 	cs []io.Closer
@@ -340,10 +324,9 @@ var cmdCreate = &cli.Command{
 			return xerrors.Errorf("failed to aquire lock")
 		}
 
-		rr, wr := io.Pipe()
 		rc, wc := io.Pipe()
 
-		mw := MultiWriteCloser(wr, wc)
+		mw := MultiWriteCloser(wc)
 
 		e := export.NewExport(node, tsk, abi.ChainEpoch(flagStaterootCount), true, mw)
 		errCh := make(chan error)
@@ -397,10 +380,6 @@ var cmdCreate = &cli.Command{
 			g, _ := errgroup.WithContext(ctx)
 
 			g.Go(func() error {
-				_, err := io.Copy(io.Discard, rr)
-				return err
-			})
-			g.Go(func() error {
 				_, err := io.Copy(io.Discard, rc)
 				return err
 			})
@@ -439,13 +418,8 @@ var cmdCreate = &cli.Command{
 			logger.Infow("object", "name", name)
 
 			g, ctxGroup := errgroup.WithContext(ctx)
-			var siRaw *snapshotInfo
 			var siCompressed *snapshotInfo
-			g.Go(func() error {
-				var err error
-				siRaw, err = runUploadRaw(ctxGroup, minioClient, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name, peerID, bt, rr)
-				return err
-			})
+
 			g.Go(func() error {
 				var err error
 				siCompressed, err = runUploadCompressed(ctxGroup, minioClient, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name, peerID, bt, rc)
@@ -458,7 +432,7 @@ var cmdCreate = &cli.Command{
 				return err
 			}
 
-			sis := []*snapshotInfo{siRaw, siCompressed}
+			sis := []*snapshotInfo{siCompressed}
 
 			var sb strings.Builder
 			for _, x := range sis {
@@ -500,50 +474,6 @@ var cmdCreate = &cli.Command{
 
 		return nil
 	},
-}
-
-func runUploadRaw(ctx context.Context, minioClient *minio.Client, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name, peerID string, bt time.Time, source io.Reader) (*snapshotInfo, error) {
-	h := sha256.New()
-	r := io.TeeReader(source, h)
-
-	filename := fmt.Sprintf("%s.car", name)
-
-	info, err := minioClient.PutObject(ctx, flagBucket, fmt.Sprintf("%s%s", flagNamePrefix, filename), r, -1, minio.PutObjectOptions{
-		ContentDisposition: fmt.Sprintf("attachment; filename=\"%s\"", filename),
-		ContentType:        "application/octet-stream",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to upload object (%s): %w", fmt.Sprintf("%s%s", flagNamePrefix, filename), err)
-	}
-
-	logger.Infow("snapshot upload",
-		"bucket", info.Bucket,
-		"key", info.Key,
-		"etag", info.ETag,
-		"size", info.Size,
-		"location", info.Location,
-		"version_id", info.VersionID,
-		"expiration", info.Expiration,
-		"expiration_rule_id", info.ExpirationRuleID,
-	)
-
-	snapshotSize := info.Size
-
-	latestLocation, err := url.JoinPath(flagRetrievalEndpointPrefix, info.Key)
-	if err != nil {
-		logger.Errorw("failed to join request path", "request_prefix", flagRetrievalEndpointPrefix, "key", info.Key)
-		return nil, fmt.Errorf("failed to join request path: %w", err)
-	}
-
-	digest := fmt.Sprintf("%x", h.Sum(nil))
-
-	return &snapshotInfo{
-		digest:         digest,
-		size:           snapshotSize,
-		filename:       filename,
-		latestIndex:    "latest",
-		latestLocation: latestLocation,
-	}, nil
 }
 
 func runUploadCompressed(ctx context.Context, minioClient *minio.Client, flagBucket, flagNamePrefix, flagRetrievalEndpointPrefix, name, peerID string, bt time.Time, source io.Reader) (*snapshotInfo, error) {
