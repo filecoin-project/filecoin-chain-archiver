@@ -31,10 +31,12 @@ func TimeAtHeight(gts *types.TipSet, height abi.ChainEpoch, blocktime time.Durat
 }
 
 /*
-             /- 500
-  |----------|----------|----------|----------|
-          |----------|
-    485 - /          \ - 585
+	/- 500
+
+|----------|----------|----------|----------|
+
+	      |----------|
+	485 - /          \ - 585
 */
 func GetNextSnapshotHeight(current, interval, confidence abi.ChainEpoch, after bool) abi.ChainEpoch {
 	next := ((current + interval) / interval) * interval
