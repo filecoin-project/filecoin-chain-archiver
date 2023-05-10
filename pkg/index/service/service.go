@@ -87,15 +87,8 @@ func (bs *IndexService) SetupService(configPath string) error {
 	})
 
 	bs.ServiceRouter.HandleFunc("/minimal/latest.zst", func(w http.ResponseWriter, r *http.Request) {
-		value, err := bs.resolver.Resolve(context.Background(), "minimal/latest.zst")
-		if err != nil {
-			logger.Errorw("error resolving", "err", err)
-			w.WriteHeader(http.StatusBadGateway)
-			return
-		}
-
-		w.Header().Set("Location", value)
-		w.WriteHeader(http.StatusFound)
+		http.Redirect(w, r, "/minimal/latest", 301)
+		return
 	})
 
 	return bs.dumpRoutes(bs.ServiceRouter)

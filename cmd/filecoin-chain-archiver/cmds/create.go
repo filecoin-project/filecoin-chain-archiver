@@ -523,7 +523,7 @@ func runUploadCompressed(ctx context.Context, minioClient *minio.Client, flagBuc
 		digest:         digest,
 		size:           snapshotSize,
 		filename:       filename,
-		latestIndex:    "latest.zst",
+		latestIndex:    "latest",
 		latestLocation: latestLocation,
 	}, nil
 }
