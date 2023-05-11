@@ -29,7 +29,7 @@ import (
 )
 
 func Compress(in io.Reader, out io.Writer) error {
-	enc, err := zstd.NewWriter(out, zstd.WithEncoderLevel(7))
+	enc, err := zstd.NewWriter(out, zstd.WithEncoderLevel(5))
 	if err != nil {
 		return err
 	}
